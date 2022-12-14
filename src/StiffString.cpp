@@ -74,14 +74,15 @@ void StiffString::setGrid(map<string, float> parameters)
     G0_0SP = (2 - 2 * lambdaSq + 5 * K - 2 * S1) * D;      // u_l^ n
 }
 
-float StiffString::getNextSample(float outputPos)
+void StiffString::process()
 {
     calculateScheme();
-
-    float out = u[0][static_cast<int> (round(outputPos * N))];
-
     updateStates();
+}
 
+float StiffString::getOutput(float outputPos)
+{
+    float out = u[0][static_cast<int> (round(outputPos * N))];
     return out; 
 }
 

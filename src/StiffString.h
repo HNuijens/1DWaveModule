@@ -30,9 +30,13 @@ public:
     
     void setFs(float Fs);
     void setGrid(map<string, float> parameters);
-    float getNextSample(float outputPos);
+    
+    //float getNextSample(float outputPos);
     void exciteSystem(float amp, float pos, int width, bool strike);
-   
+
+    void process();
+    float getOutput(float outputPos);
+
     float Fs = 48000.0;
 
 private:

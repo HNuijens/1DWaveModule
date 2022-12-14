@@ -41,12 +41,10 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 
 	for (size_t i = 0; i < size; i++)
 	{
-		float x = 0.0;
-
-		x = stiffString.getNextSample(1.0 / M_PI);
-
-		out[0][i] = x;
-		out[1][i] = x;
+		stiffString.process();
+		
+		out[0][i] = stiffString.getOutput(0.1f);
+		out[1][i] = stiffString.getOutput(0.9f);
 	}
 }
 
