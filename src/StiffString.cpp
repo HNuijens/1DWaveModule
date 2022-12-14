@@ -72,7 +72,6 @@ void StiffString::setGrid(map<string, float> parameters)
 
 
     G0_0SP = (2 - 2 * lambdaSq + 5 * K - 2 * S1) * D;      // u_l^ n
-    isDone = true; 
 }
 
 float StiffString::getNextSample(float outputPos)
@@ -80,7 +79,7 @@ float StiffString::getNextSample(float outputPos)
     calculateScheme();
 
     float out = u[0][static_cast<int> (round(outputPos * N))];
-    //out = out;  // scale to make excitaiton audible 
+
     updateStates();
 
     return out; 

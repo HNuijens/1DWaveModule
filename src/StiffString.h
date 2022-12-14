@@ -34,7 +34,6 @@ public:
     void exciteSystem(float amp, float pos, int width, bool strike);
    
     float Fs = 48000.0;
-    bool isDone = false; 
 
 private:
     void calculateScheme();
@@ -42,7 +41,7 @@ private:
    
     float h, k, L, c, f0, r, A, I, E, rho, sig0, sig1, kappaSq, lambdaSq;  // parameters
     float S0, S1, K, D, G0_0, G0_1, G0_2, G1_0, G1_1, G0_0SP;              // Stencil factors
-    int N;                                                                  // grid size
+    int N;                                                                 // grid size
 
     vector<vector<float>> uStates;                                         // vector containing the grid states
     vector<float*> u;                                                      // vector with pointers to the grid states
