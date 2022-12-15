@@ -7,6 +7,8 @@
 
   ==============================================================================
 */
+#pragma once
+
 #ifndef M_PI
     #define M_PI 3.14159265358979323846
 #endif
@@ -14,12 +16,10 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <vector>
-#include <map>
+#include <unordered_map>
 #include <string>
 
 using namespace std;
-
-#pragma once
 
 class StiffString
 {
@@ -29,7 +29,7 @@ public:
     ~StiffString();     // Destructor
     
     void setFs(float Fs);
-    void setGrid(map<string, float> parameters);
+    void setGrid(unordered_map<string, float> parameters);
     
     //float getNextSample(float outputPos);
     void exciteSystem(float amp, float pos, int width, bool strike);

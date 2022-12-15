@@ -26,7 +26,7 @@ void StiffString::setFs(float Fs)
     k = 1.0 / Fs; 
 }
 
-void StiffString::setGrid(map<string, float> parameters)
+void StiffString::setGrid(unordered_map<string, float> parameters)
 {
     // Get Parameters
     f0 = parameters["f0"];
