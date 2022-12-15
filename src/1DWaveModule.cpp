@@ -17,13 +17,7 @@ using namespace daisy;
 using namespace daisysp;
 
 DaisySeed hw;
-
 StiffString stiffString;
-
-// Resonator parameters:
-//map<string, float> parameters;
-
-float gain = 1.;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
