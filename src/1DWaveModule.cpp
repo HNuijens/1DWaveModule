@@ -22,7 +22,7 @@ StiffString stiffString;
 // Resonator parameters:
 map<string, float> parameters;
 
-float f0 = 120; 		   // Fundamental Frequency
+float f0 = 110; 		   // Fundamental Frequency
 float L = 1.;              // length of string;
 
 float sig0 = 0.1;           // frequency independent damping
@@ -34,6 +34,8 @@ float E = 2e11;            // Youngs modulus
 
 float gain = 1.;
 
+// methods
+float limit(float min, float max, float x);
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -42,9 +44,9 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	for (size_t i = 0; i < size; i++)
 	{
 		stiffString.process();
-		
-		out[0][i] = stiffString.getOutput(0.1f);
-		out[1][i] = stiffString.getOutput(0.9f);
+
+		out[0][i] = limit(-1., 1., stiffString.getOutput(0.1f));
+		out[1][i] = limit(-1., 1., stiffString.getOutput(0.9f));
 	}
 }
 
@@ -69,5 +71,17 @@ int main(void)
 
 	hw.StartAudio(AudioCallback);
 
-	while(1) {}
+	while(1) {
+
+	//stiffString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10, false);
+
+
+	}
+}
+
+float limit(float min, float max, float x)
+{
+	if(x < min) return min;
+	if(x > max) return max; 
+	else return x;
 }
