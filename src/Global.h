@@ -13,6 +13,8 @@
 #include <unordered_map>
 #include <string>
 
+using namespace std; 
+
 static float limit(float min, float max, float x)
 {
     if(x < min)
@@ -23,7 +25,7 @@ static float limit(float min, float max, float x)
         return x;
 }
 
-static unordered_map<string, float> defaultStringParameters
+static unordered_map<string, float> defaultStiffStringParameters
     = {{"f0", 220.0},
        {"L", 1.0},
        {"rho", 7850.0},
@@ -44,3 +46,11 @@ static unordered_map<string, float> defaultBarParameters
        {"I", pow(0.004, 4) * M_PI * 0.25},
        {"sig0", 1},
        {"sig1", 0.05}};
+
+static unordered_map<string, float> defaultStringParameters
+    = {{"f0", 220.0},
+       {"L", 0.5},
+       {"sig0", 1},
+       {"sig1", 0.05}};
+
+

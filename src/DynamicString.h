@@ -35,7 +35,7 @@ public:
     void setFs(float Fs);
     void setGrid(unordered_map<string, float> parameters);  // set grid size N
     void setDynamicGrid(float f0);
-    void exciteSystem(float width, float excitationLoc);
+    void exciteSystem(float amp, float excitationLoc, float width);
     void process();  
     float getOutput(float outputPos);       
     void setMaxChange();

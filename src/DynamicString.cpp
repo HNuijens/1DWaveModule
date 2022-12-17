@@ -26,9 +26,7 @@ void DynamicString::setFs(float Fs)
 }
 void DynamicString::setMaxChange()
 {
-    float maxChangeH = maxNChange;
     float maxChangeC = sqrt((maxNChange * maxNChange / k * k)  - 4.0f * sig1 * k);
-
     maxChangeF0 = maxChangeC / (2.0 * L);
 }
 
@@ -94,7 +92,7 @@ void DynamicString::resetGrid()
     uPrevM1 = uM1 = 0;
 }
 
-void DynamicString::exciteSystem(float width, float excitationLoc)
+void DynamicString::exciteSystem(float amp, float excitationLoc, float width)
 {
     //// Raised cosine excitation ////
     // width (in grid points) of the excitation
@@ -117,8 +115,8 @@ void DynamicString::exciteSystem(float width, float excitationLoc)
             break;
         else if (l + start < M)
         {
-            u[1][l + start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
-            u[2][l + start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            u[1][l + start] += 0.5 * amp * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            u[2][l + start] += 0.5 * amp * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
         }
         else if (l + start == M)
         {
@@ -126,8 +124,8 @@ void DynamicString::exciteSystem(float width, float excitationLoc)
         }
         else if (l + start >= M)
         {
-            w[1][l + startw - switchVal] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
-            w[2][l + startw - switchVal] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            w[1][l + startw - switchVal] += 0.5 * amp * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            w[2][l + startw - switchVal] += 0.5 * amp * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
         }
     }
 }
