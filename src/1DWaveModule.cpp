@@ -10,14 +10,19 @@
 
 #include "daisy_seed.h"
 #include "daisysp.h"
-#include "StiffString.h"
+
 #include "Global.h"
+#include "StiffString.h"
+#include "DynamicString.h"
+
 
 using namespace daisy;
 using namespace daisysp;
 
 DaisySeed hw;
+
 StiffString stiffString;
+DynamicString dynamicString;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -27,8 +32,8 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	{
 		stiffString.process();
 
-		out[0][i] = limit(-1., 1., stiffString.getOutput(0.1f));
-		out[1][i] = limit(-1., 1., stiffString.getOutput(0.9f));
+		out[0][i] = limit(-1., 1., stiffString.getOutput(0.2f));
+		out[1][i] = limit(-1., 1., stiffString.getOutput(0.8f));
 	}
 }
 

@@ -1,0 +1,318 @@
+/*
+  ==============================================================================
+
+    DynamicString.cpp
+    Created: 25 Mar 2022 11:33:06am
+    Author:  Helmer Nuijens
+
+  ==============================================================================
+*/
+#include "DynamicString.h"
+
+DynamicString::DynamicString()
+{
+
+}
+
+DynamicString::~DynamicString()
+{
+
+}
+
+void DynamicString::setFs(float Fs)
+{
+    this->Fs = Fs;
+    k = 1. / Fs;
+}
+void DynamicString::setMaxChange()
+{
+    float maxChangeH = maxNChange;
+    float maxChangeC = sqrt((maxNChange * maxNChange / k * k)  - 4.0f * sig1 * k);
+
+    maxChangeF0 = maxChangeC / (2.0 * L);
+}
+
+void DynamicString::setGrid(unordered_map<string, float> parameters)
+{
+    // Get Parameters
+    f0 = parameters["f0"];
+    L = parameters["L"];
+    sig0 = parameters["sig0"];
+    sig1 = parameters["sig1"];
+
+    c = 2.0f * L * f0;
+    h = sqrt(c * c * k * k + 4.0f * sig1 * k);
+    N = L / h; 
+
+    if (floor(N) - floor(N1) > 1 || floor(N) - floor(N1) < -1)
+    {
+        resetGrid();
+    }
+
+    setMaxChange();
+    getSchemeWeights();
+}
+
+void DynamicString::setDynamicGrid(float newF0)
+{
+    if (newF0 < f0 - maxChangeF0)
+    {
+        f0 -= maxChangeF0;
+    }
+    else if(newF0 > f0 + maxChangeF0)
+        f0 += maxChangeF0;
+    else 
+        f0 = newF0; 
+
+    c = 2.0f * L * f0;
+    h = sqrt(c * c * k * k + 4.0f * sig1 * k);
+    N = L / h; 
+
+    getSchemeWeights();
+}
+
+void DynamicString::resetGrid()
+{
+    M = ceil(0.5 * L / h);
+    Mw = floor(0.5 * L / h);
+
+    u = vector<vector<float>>(3, vector<float>(M, 0));
+    w = vector<vector<float>>(3, vector<float>(Mw, 0));
+
+   // u.resize(3, nullptr);
+    //w.resize(3, nullptr);
+
+    /*for (int n = 0; n < 3; n++)
+    {
+        u[n] = &uStates[n][0];
+        w[n] = &wStates[n][0];
+    }*/
+
+    N1 = N;
+
+    wPrevMin1 = wMin1 = 0;
+    uPrevM1 = uM1 = 0;
+}
+
+void DynamicString::exciteSystem(float width, float excitationLoc)
+{
+    //// Raised cosine excitation ////
+    // width (in grid points) of the excitation
+    // make sure we’re not going out of bounds at the left boundary
+    int switchVal = 0;
+    int start = max(floor((N + 1) * excitationLoc) - floor(width * 0.5), 1.0);
+    int startw = 0;
+    if (start > M)
+    {
+        startw = start - M;
+    }
+
+    // DBG(start);
+    for (int l = 0; l < width; ++l)
+    {
+        // make sure we’re not going out of bounds
+        // at the right boundary (this does ’cut off’
+        // the raised cosine)
+        if (l + startw - switchVal > Mw - 1)
+            break;
+        else if (l + start < M)
+        {
+            u[1][l + start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            u[2][l + start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+        }
+        else if (l + start == M)
+        {
+            switchVal = l + 1;
+        }
+        else if (l + start >= M)
+        {
+            w[1][l + startw - switchVal] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+            w[2][l + startw - switchVal] += 0.5 * (1 - cos(2.0 * M_PI * l / (width - 1.0)));
+        }
+    }
+}
+
+void DynamicString::process()
+{
+    alpha = N - floor(N); // calc distance between two systems
+
+    // Check if there is a need to add/delete grid points
+    if (floor(N) > floor(N1)) addPoint();
+    else if (floor(N) < floor(N1)) removePoint();
+
+    getVirtualGridPoints();
+    calculateScheme();
+    updateStates();
+}
+
+float DynamicString::getOutput(float outputPos)
+{
+     float out;
+
+    int pos = static_cast<int>(round(outputPos * N));
+    if (pos >= M)
+    {
+        pos = pos - M;
+        out = w[1][pos];
+    }
+
+    else 
+        out = u[1][pos];
+
+    return out; 
+}
+
+void DynamicString::addPoint()
+{
+    // Calculate cubic interpolation
+    I3[0] = -(alpha * (alpha + 1)) / ((alpha + 2) * (alpha + 3));
+    I3[1] = 2 * alpha / (alpha + 2);
+    I3[2] = 2 / (alpha + 2);
+    I3[3] = -(2 * alpha) / ((alpha + 3) * (alpha + 2));
+    I3Flipped = I3;
+    reverse(I3Flipped.begin(), I3Flipped.end()); // Flip vector
+
+    // Floored N is even, add to right system
+    if (static_cast<int>(floor(N)) % 2 == 0)
+    {
+        // Add to the start of w
+        w[0].insert(w[0].begin(), 0);
+        w[1].insert(w[1].begin(), 0);
+        w[2].insert(w[2].begin(), 0);
+
+       /* for (int n = 0; n < 3; n++)
+        {
+            w[n] = &wStates[(((index + n) % 3) + 3) % 3][0];
+        }*/
+
+        w[0][0] = I3Flipped[0] * u[1][M - 2] + I3Flipped[1] * u[1][M - 1] + I3Flipped[2] * w[1][1] + I3Flipped[3] * w[1][2];
+        w[1][0] = I3Flipped[0] * u[1][M - 2] + I3Flipped[1] * u[1][M - 1] + I3Flipped[2] * w[1][1] + I3Flipped[3] * w[1][2];
+        w[2][0] = I3Flipped[0] * u[2][M - 2] + I3Flipped[1] * u[2][M - 1] + I3Flipped[2] * w[2][1] + I3Flipped[3] * w[2][2];
+
+        Mw++;
+    }
+    else // Floored N is odd, add the to left system
+    {
+        // Add to the end of u
+        u[0].push_back(0);
+        u[1].push_back(0);
+        u[2].push_back(0);
+
+       /*for (int n = 0; n < 3; n++)
+        {
+            u[n] = &uStates[(((index + n) % 3) + 3) % 3][0];
+        }*/
+
+        u[0][M] = I3[0] * u[1][M - 2] + I3[1] * u[1][M - 1] + I3[2] * w[1][0] + I3[3] * w[1][1];
+        u[1][M] = I3[0] * u[1][M - 2] + I3[1] * u[1][M - 1] + I3[2] * w[1][0] + I3[3] * w[1][1];
+        u[2][M] = I3[0] * u[2][M - 2] + I3[1] * u[2][M - 1] + I3[2] * w[2][0] + I3[3] * w[2][1];
+
+        M++;
+    }
+}
+
+void DynamicString::removePoint()
+{
+    // Floored N is even, remove from left system
+    if (static_cast<int>(floor(N)) % 2 == 0)
+    {
+        // Remove from right side of u
+        u[0].pop_back();
+        u[1].pop_back();
+        u[2].pop_back();
+
+        M--;
+    }
+    else // Floored N is odd, remove from left system
+    {
+        // Remove from left side of w
+        w[0].erase(w[0].begin());
+        w[1].erase(w[1].begin());
+        w[2].erase(w[2].begin());
+
+        Mw--;
+    }
+}
+
+void DynamicString::getVirtualGridPoints()
+{
+    I2[0] = -(alpha - 1) / (alpha + 1);
+    I2[1] = 1;
+    I2[2] = (alpha - 1) / (alpha + 1);
+    I2Flipped = I2;
+    reverse(I2Flipped.begin(), I2Flipped.end()); // Flip vector
+
+    uM1 = u[1][M - 1] * I2Flipped[0] + w[1][0] * I2Flipped[1] + w[1][1] * I2Flipped[2];
+    wMin1 = u[1][M - 2] * I2[0] + u[1][M - 1] * I2[1] + w[1][0] * I2[2];
+}
+
+void DynamicString::getSchemeWeights()
+{
+    D = 1. + sig0 * k;
+    C1 = 2.;
+    C2 = sig0 * k - 1.;
+    C3 = (c * c * k * k) / (h * h);
+    C4 = (2 * sig1 * k) / (h * h);
+    C5 = (k * k / h);
+
+    C1 = C1 / D;
+    C2 = C2 / D;
+    C3 = C3 / D;
+    C4 = C4 / D;
+    C5 = C5 / D;
+}
+
+void DynamicString::calculateScheme()
+{
+    for (int m = 1; m < M; m++)
+    {
+        if (m == M - 1)
+        {
+            u[0][m] = C1 * u[1][m] + C2 * u[2][m] + C3 * (uM1 - 2 * u[1][m] + u[1][m - 1]) + C4 * (uM1 - 2 * u[1][m] + u[1][m - 1] - uPrevM1 + 2 * u[2][m] - u[2][m - 1]);
+        }
+        else
+        {
+            u[0][m] = C1 * u[1][m] + C2 * u[2][m] + C3 * (u[1][m + 1] - 2 * u[1][m] + u[1][m - 1]) + C4 * (u[1][m + 1] - 2 * u[1][m] + u[1][m - 1] - u[2][m + 1] + 2 * u[2][m] - u[2][m - 1]);
+        }
+    }
+
+    for (int m = 0; m < Mw - 1; m++)
+    {
+        if (m == 0)
+        {
+            w[0][m] = C1 * w[1][m] + C2 * w[2][m] + C3 * (w[1][m + 1] - 2 * w[1][m] + wMin1) + C4 * (w[1][m + 1] - 2 * w[1][m] + wMin1 - w[2][m + 1] + 2 * w[2][m] - wPrevMin1);
+        }
+        else
+        {
+            w[0][m] = C1 * w[1][m] + C2 * w[2][m] + C3 * (w[1][m + 1] - 2 * w[1][m] + w[1][m - 1]) + C4 * (w[1][m + 1] - 2 * w[1][m] + w[1][m - 1] - w[2][m + 1] + 2 * w[2][m] - w[2][m - 1]);
+        }
+    }
+}
+
+void DynamicString::updateStates()
+{
+  /*  if (index < 3) index++;
+    else index = 0;
+
+    float* uTmp = u[2];
+    u[2] = u[1];
+    u[1] = u[0];
+    u[0] = uTmp;
+
+    float* wTmp = w[2];
+    w[2] = w[1];
+    w[2] = w[1];
+    w[1] = w[0];
+    w[0] = wTmp;*/
+
+    u[2] = u[1];
+    u[1] = u[0];
+
+    w[2] = w[1];
+    w[1] = w[0];
+
+    N1 = N;
+
+    wPrevMin1 = wMin1;
+    uPrevM1 = uM1;
+}
