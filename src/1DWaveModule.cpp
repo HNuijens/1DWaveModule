@@ -26,8 +26,8 @@ DynamicString dynamicString;
 
 float freq = 220; 
 float freqChange = 0.01; 
-float minFreq = 110;
-float maxFreq = 880;
+float minFreq = 220;
+float maxFreq = 440;
 int t = 0;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
