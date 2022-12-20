@@ -4,8 +4,10 @@ TARGET = 1DWaveModule
 # Sources
 CPP_SOURCES = \
 src/1DWaveModule.cpp\
-src/StiffString.cpp\
-src/DynamicString.cpp
+src/DynamicStiffString.cpp
+#src/StiffString.cpp\
+#src/DynamicString.cpp\
+
 
 # Library Locations
 LIBDAISY_DIR = ../../libDaisy/

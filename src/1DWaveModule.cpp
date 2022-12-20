@@ -11,9 +11,12 @@
 #include "daisy_seed.h"
 #include "daisysp.h"
 
+#include <memory>
+
 #include "Global.h"
-#include "StiffString.h"
-#include "DynamicString.h"
+//#include "StiffString.h"
+//#include "DynamicString.h"
+#include "DynamicStiffString.h"
 
 
 using namespace daisy;
@@ -21,13 +24,14 @@ using namespace daisysp;
 
 DaisySeed hw;
 
-StiffString stiffString;
-DynamicString dynamicString;
+//StiffString stiffString;
+//DynamicString dynamicString;
+std::unique_ptr<DynamicStiffString> dynamicStiffString;
 
 float freq = 220; 
 float freqChange = 0.01; 
-float minFreq = 220;
-float maxFreq = 440;
+float minFreq = 150;
+float maxFreq = 300;
 int t = 0;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
@@ -38,18 +42,18 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	if(freq > maxFreq || freq < minFreq)
 	{
 		freqChange*=-1;
-		dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
+		//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
 	}
 
-	dynamicString.setDynamicGrid(freq);
+	//dynamicString.setDynamicGrid(freq);
 	
 
 	for (size_t i = 0; i < size; i++)
 	{
-		dynamicString.process();
+		dynamicStiffString -> process();
 
-		out[0][i] = limit(-1., 1., dynamicString.getOutput(0.2f));
-		out[1][i] = limit(-1., 1., dynamicString.getOutput(0.8f));
+		out[0][i] = limit(-1., 1., dynamicStiffString->getOutput());
+		out[1][i] = limit(-1., 1., dynamicStiffString->getOutput());
 	}
 }
 
@@ -63,10 +67,11 @@ int main(void)
 	// stiffString.setGrid(defaultBarParameters);
 	// stiffString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10, false);
 
-
-	dynamicString.setFs(hw.AudioSampleRate());
-	dynamicString.setGrid(defaultStiffStringParameters);
-	dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
+	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, 1.0 / hw.AudioSampleRate());
+	//dynamicStiffString.setFs(hw.AudioSampleRate());
+	//dynamicString.setGrid(defaultStiffStringParameters);
+	//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
+	dynamicStiffString -> excite();
 
 	hw.StartAudio(AudioCallback);
 
