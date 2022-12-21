@@ -17,7 +17,6 @@ using namespace std;
 
  static double N_MAX_CHANGE = 1.0 / 20.0;
  static double SIG_1_MIN = 0.0002;
- //static double M_PI = 3.14159265358979323846;
 
 static float limit(float min, float max, float x)
 {
@@ -61,7 +60,7 @@ static unordered_map<string, float> defaultDynamicStiffStringParameters
     = {{"f0", 220.0},
        {"L", 1.0},
        {"rho", 7850.0},
-       {"T", 300},
+       {"T", 150},
        {"A", 0.0005 * 0.0005 * M_PI},
        {"r", 0.0005},
        {"E", 2e11},

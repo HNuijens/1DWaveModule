@@ -17,7 +17,6 @@
 
 #pragma once
 
-#include <fstream>
 #include "Global.h"
 #include <unordered_map>
 #include <string>
@@ -30,32 +29,34 @@
 class DynamicStiffString
 {
 public:
-    DynamicStiffString (unordered_map<string, float> parameters, double k);
+    //DynamicStiffString();
+    DynamicStiffString(unordered_map<string, float> parameters, float sr);
     ~DynamicStiffString();
 
     //void paint (juce::Graphics&) override;
     //void resized() override;
     
     // function to draw the state of the string
-    //Path visualiseState (Graphics& g, double visualScaling, double& length);
+    //Path visualiseState (Graphics& g, float visualScaling, float& length);
 
+    void init(unordered_map<string, float> parameters, float k); 
     void calculateScheme();
     void updateStates();
 
     void process();
     
-    void refreshParameter (int changedParameterIdx, double changedParameterValue);
+    void refreshParameter (int changedParameterIdx, float changedParameterValue);
     
     void refreshCoefficients (bool init = false);
     
     //return u at the current sample at a location given by the length ratio
 
-    double getOutput()
+    float getOutput()
     {
         return v[1][6]; // set to be fixed due to varying N
     }
     
-    void excite (int loc = -1);
+    void excite (float amp = 1., int loc = -1, float width = 10);
     //void mouseDown (const MouseEvent& e) override;
     
     bool shouldExcite() { return excitationFlag; };
@@ -64,13 +65,12 @@ public:
     void refreshCustomIp();
     
     //bool keyPressed (const KeyPress& key, Component* originatingComponent) override;
-private:
-    
+private: 
     // Model parameters
-    double f0, L, rho, r, A, T, E, I, cSq, kappaSq, sigma0, sigma1, lambdaSq, muSq, h, k;
-    double origR, origL, origE, origT, origRho;
-    std::vector<double*> parameterPtrs; // to easily locate parameters
-    std::vector<double> parametersToGoTo;
+    float f0, L, rho, r, A, T, E, I, cSq, kappaSq, sigma0, sigma1, lambdaSq, muSq, h, k;
+    float origR, origL, origE, origT, origRho;
+    std::vector<float*> parameterPtrs; // to easily locate parameters
+    std::vector<float> parametersToGoTo;
     std::vector<bool> parameterChanged;
 
     // Number of intervals (N+1 is number of points including boundaries)
@@ -81,16 +81,16 @@ private:
     const int Mw = 1; // Mw is static
     
     // Fractional number of intervals used for dynaic grid
-    double Nfrac, NfracPrev;
-    double alf, Iterm, A0, A1, A2, A3, AA;
+    float Nfrac, NfracPrev;
+    float alf, Iterm, A0, A1, A2, A3, AA;
     
     // (N+1) x 3 'matrices' containing the state of the left and right system at all time-steps
-    std::vector<std::vector<double>> vStates;
-    std::vector<std::vector<double>> wStates;
+    std::vector<std::vector<float>> vStates;
+    std::vector<std::vector<float>> wStates;
 
     // vectors of pointers that point to state vectors
-    std::vector<double*> v;
-    std::vector<double*> w;
+    std::vector<float*> v;
+    std::vector<float*> w;
 
     /* Scheme variables
         - Adiv for u^{n+1} (that all terms get divided by)
@@ -98,17 +98,15 @@ private:
         - C for u^{n-1}
         - S for precalculated sigma terms
     */
-    double Adiv, B0, Bss, B1, B2, C0, C1, S0, S1;
+    float Adiv, B0, Bss, B1, B2, C0, C1, S0, S1;
     
     // flag to tell MainComponent whether to excite the scheme or not
     bool excitationFlag = false;
     
     // initialise location of excitation
-    double excitationLoc = 0.22;
+    float excitationLoc = 0.22;
     
     bool clamped = true;
     
-    std::vector<double> customIp;
-    
-    std::ofstream uSave, MvSave, MwSave, alfSave;
+    std::vector<float> customIp;
 };

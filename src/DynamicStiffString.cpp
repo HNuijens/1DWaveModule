@@ -14,7 +14,108 @@
 
 
 //==============================================================================
-DynamicStiffString::DynamicStiffString (unordered_map<string, float> parameters, double k) : k (k)
+
+
+// DynamicStiffString::DynamicStiffString()
+// {
+   
+// }
+
+DynamicStiffString::DynamicStiffString(unordered_map<string, float> parameters, float sr)
+{
+    // Initialise member variables using the parameter set
+    // Get Parameters
+    f0 = parameters["f0"];
+    L = parameters["L"];
+    rho = parameters["rho"];
+    r = parameters["r"];
+    E = parameters["E"];
+    T = parameters["T"];
+    sigma0 = parameters["sig0"];
+    sigma1 = parameters["sig1"];
+    
+    k = 1.0 / sr; 
+    A = r * r * M_PI;
+    I = r * r * r * r * M_PI * 0.25;
+
+    //c = f0 * 2.0 * L;
+
+    origR = r;
+    origT = T;
+    origE = E;
+    origL = L;
+    origRho = rho;
+    
+    parameterPtrs.reserve (8);
+    parameterPtrs.push_back (&L);
+    parameterPtrs.push_back (&rho);
+    parameterPtrs.push_back (&r);
+    parameterPtrs.push_back (&T);
+    parameterPtrs.push_back (&E);
+    parameterPtrs.push_back (&sigma0);
+    parameterPtrs.push_back (&sigma1);
+    
+    parametersToGoTo.resize (parameterPtrs.size(), 0);
+    for (int i = 0; i < static_cast<int>(parameterPtrs.size()); ++i)
+        parametersToGoTo[i] = *parameterPtrs[i];
+    
+    parameterChanged.resize (parameterPtrs.size(), false);
+    
+    float cSqMin = 0.5 * T / (2.0 * rho * 2.0 * r * 2.0 * r * M_PI);
+
+    float hMin = sqrt(cSqMin * k * k + 4.0 * SIG_1_MIN * k);
+    Nmax = floor (2.0 * L / hMin);
+    
+    // float rMax = 0.5 * r; //?
+    // float cSqMax = 2.0 * T / (0.5 * rho * rMax * rMax * M_PI);
+    // float kappaSqMax = 2.0 * E * M_PI *rMax * rMax * rMax * rMax * 0.25 / (0.5 * rho * rMax * rMax * M_PI);
+    
+    // float hMax = sqrt((cSqMax * k * k + 4.0 * sigma1 * 2.0 * k + sqrt(pow(cSqMax * k * k + 4.0 * sigma1 * 2.0 * k, 2) + 16 * kappaSqMax * k * k))/2.0);
+
+    // float Nmin = floor (0.5 * L / hMax);
+    
+    // only add to left system (v)
+    int MvMax = Nmax - Mw;
+    
+    // Initialise vectors (excluding outer boundaries
+    vStates = std::vector<std::vector<float>> (3,
+                                        std::vector<float>(MvMax+1, 0));
+    
+    wStates = std::vector<std::vector<float>> (3,
+                                        std::vector<float>(Mw+1, 0));
+
+    /*  Make u pointers point to the first index of the state vectors.
+        To use u (and obtain a vector from the state vectors) use indices like u[n][l] where,
+             - n = 0 is u^{n+1},
+             - n = 1 is u^n, and
+             - n = 2 is u^{n-1}.
+        Also see calculateScheme()
+     */
+    
+    // Initialise pointer vector
+    v.resize (3, nullptr);
+    w.resize (3, nullptr);
+
+    // Make set memory addresses to first index of the state vectors.
+    for (int i = 0; i < 3; ++i)
+    {
+        v[i] = &vStates[i][0];
+        w[i] = &wStates[i][0];
+    }
+    customIp.resize(4, 0);
+    
+    refreshCoefficients (true);
+    
+    Nprev = N;
+    NfracPrev = Nfrac; 
+    
+}
+
+DynamicStiffString::~DynamicStiffString()
+{
+}
+
+void DynamicStiffString::init(unordered_map<string, float> parameters, float k)
 {
     
     // Initialise member variables using the parameter set
@@ -56,28 +157,28 @@ DynamicStiffString::DynamicStiffString (unordered_map<string, float> parameters,
     
     parameterChanged.resize (parameterPtrs.size(), false);
     
-    double cSqMin = 0.5 * T / (2.0 * rho * 2.0 * r * 2.0 * r * M_PI);
+    float cSqMin = 0.5 * T / (2.0 * rho * 2.0 * r * 2.0 * r * M_PI);
 
-    double hMin = sqrt(cSqMin * k * k + 4.0 * SIG_1_MIN * k);
+    float hMin = sqrt(cSqMin * k * k + 4.0 * SIG_1_MIN * k);
     Nmax = floor (2.0 * L / hMin);
     
-    //double rMax = 0.5 * r; //?
-    //double cSqMax = 2.0 * T / (0.5 * rho * rMax * rMax * M_PI);
-    //double kappaSqMax = 2.0 * E * M_PI *rMax * rMax * rMax * rMax * 0.25 / (0.5 * rho * rMax * rMax * M_PI);
+    float rMax = 0.5 * r; //?
+    float cSqMax = 2.0 * T / (0.5 * rho * rMax * rMax * M_PI);
+    float kappaSqMax = 2.0 * E * M_PI *rMax * rMax * rMax * rMax * 0.25 / (0.5 * rho * rMax * rMax * M_PI);
     
-    //double hMax = sqrt((cSqMax * k * k + 4.0 * sigma1 * 2.0 * k + sqrt(pow(cSqMax * k * k + 4.0 * sigma1 * 2.0 * k, 2) + 16 * kappaSqMax * k * k))/2.0);
+    float hMax = sqrt((cSqMax * k * k + 4.0 * sigma1 * 2.0 * k + sqrt(pow(cSqMax * k * k + 4.0 * sigma1 * 2.0 * k, 2) + 16 * kappaSqMax * k * k))/2.0);
 
-    //double Nmin = floor (0.5 * L / hMax);
+    float Nmin = floor (0.5 * L / hMax);
     
     // only add to left system (v)
     int MvMax = Nmax - Mw;
     
     // Initialise vectors (excluding outer boundaries
-    vStates = std::vector<std::vector<double>> (3,
-                                        std::vector<double>(MvMax+1, 0));
+    vStates = std::vector<std::vector<float>> (3,
+                                        std::vector<float>(MvMax+1, 0));
     
-    wStates = std::vector<std::vector<double>> (3,
-                                        std::vector<double>(Mw+1, 0));
+    wStates = std::vector<std::vector<float>> (3,
+                                        std::vector<float>(Mw+1, 0));
 
     /*  Make u pointers point to the first index of the state vectors.
         To use u (and obtain a vector from the state vectors) use indices like u[n][l] where,
@@ -103,10 +204,6 @@ DynamicStiffString::DynamicStiffString (unordered_map<string, float> parameters,
     
     Nprev = N;
     NfracPrev = Nfrac;    
-}
-
-DynamicStiffString::~DynamicStiffString()
-{
 }
 
 void DynamicStiffString::process()
@@ -227,12 +324,12 @@ void DynamicStiffString::calculateScheme()
 void DynamicStiffString::updateStates()
 {
     // Do a pointer-switch. MUCH quicker than copying two entire state vectors every time-step.
-    double* vTmp = v[2];
+    float* vTmp = v[2];
     v[2] = v[1];
     v[1] = v[0];
     v[0] = vTmp;
     
-    double* wTmp = w[2];
+    float* wTmp = w[2];
     w[2] = w[1];
     w[1] = w[0];
     w[0] = wTmp;
@@ -241,12 +338,9 @@ void DynamicStiffString::updateStates()
     Nprev = N;
 }
 
-void DynamicStiffString::excite (int loc)
+void DynamicStiffString::excite (float amp, int loc, float width)
 {
     //// Arbitrary excitation function (raised cosine) ////
-    
-    // width (in grid points) of the excitation
-    double width = 10;
     
     // make sure we're not going out of bounds at the left boundary
     int start = (loc == -1) ? std::max (floor((N+1) * excitationLoc) - floor(width * 0.5), 1.0) : loc;
@@ -257,24 +351,32 @@ void DynamicStiffString::excite (int loc)
         if (l+start > Mv)
             break;
         
-        v[1][l+start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width-1.0)));
-        v[2][l+start] += 0.5 * (1 - cos(2.0 * M_PI * l / (width-1.0)));
+        v[1][l+start] += amp * 0.5 * (1 - cos(2.0 * M_PI * l / (width-1.0)));
+        v[2][l+start] += amp * 0.5 * (1 - cos(2.0 * M_PI * l / (width-1.0)));
     }
     // Disable the excitation flag to only excite once
     excitationFlag = false;
+
+    float testVal = v[1][6];
+
+    if(testVal!=0)
+    {
+        //testing puposes
+        
+    }
 }
 
-void DynamicStiffString::refreshParameter (int changedParameterIdx, double changedParameterValue)
+void DynamicStiffString::refreshParameter (int changedParameterIdx, float changedParameterValue)
 {
     parametersToGoTo[changedParameterIdx] = changedParameterValue;
     parameterChanged[changedParameterIdx] = true;
 }
 
-void DynamicStiffString::refreshCoefficients (bool init)
+void DynamicStiffString:: refreshCoefficients (bool init)
 {
-    double NmaxChange = N_MAX_CHANGE;
-    double paramDiffMax;
-    double NfracNext;
+    float NmaxChange = N_MAX_CHANGE;
+    float paramDiffMax;
+    float NfracNext;
 
     bool needsRefresh = false;
     for (int i = 0; i < static_cast<int>(parameterPtrs.size()); ++i)
@@ -306,14 +408,14 @@ void DynamicStiffString::refreshCoefficients (bool init)
             
             if (E != 0)
             {
-                double NfracNextPlus = Nfrac + NmaxChange;
-                double NfracNextMin = Nfrac - NmaxChange;
+                float NfracNextPlus = Nfrac + NmaxChange;
+                float NfracNextMin = Nfrac - NmaxChange;
 
                 
-                double bCoeffPlus = (16.0 * L * L * sigma1 * k) / (NfracNextPlus * NfracNextPlus) - (4.0 * L*L*L*L)/(NfracNextPlus * NfracNextPlus * NfracNextPlus * NfracNextPlus);
-                double bCoeffMin = (16.0 * L * L * sigma1 * k) / (NfracNextMin * NfracNextMin) - (4.0 * L*L*L*L)/(NfracNextMin * NfracNextMin * NfracNextMin * NfracNextMin);
+                float bCoeffPlus = (16.0 * L * L * sigma1 * k) / (NfracNextPlus * NfracNextPlus) - (4.0 * L*L*L*L)/(NfracNextPlus * NfracNextPlus * NfracNextPlus * NfracNextPlus);
+                float bCoeffMin = (16.0 * L * L * sigma1 * k) / (NfracNextMin * NfracNextMin) - (4.0 * L*L*L*L)/(NfracNextMin * NfracNextMin * NfracNextMin * NfracNextMin);
 
-                std::vector<double> rVals (4, 0);
+                std::vector<float> rVals (4, 0);
                 
                 // The graph of N (y-axis) vs r (x-axis) is a negative parabola. For a change in N (either positive or negative, there are 4 possible r values. Here we're trying to find the one that corresponds to the one we're trying to find.
                 
@@ -328,8 +430,8 @@ void DynamicStiffString::refreshCoefficients (bool init)
                 // r left side of parabola, decreasing N
                 rVals[3] = sqrt((-bCoeffMin - sqrt(bCoeffMin * bCoeffMin - 16.0 * E * k * k / rho * (4.0 * L*L * T * k*k) / (NfracNextMin * NfracNextMin * rho * M_PI)))/(8.0 * (E * k * k / rho)));
                 
-                double rDiff = 1;
-                double rToGoTo = parametersToGoTo[i];
+                float rDiff = 1;
+                float rToGoTo = parametersToGoTo[i];
                 int idxToChoose = -1;
                 for (int i = 0; i < static_cast<int>(rVals.size()); ++i)
                 {
@@ -402,10 +504,10 @@ void DynamicStiffString::refreshCoefficients (bool init)
     }
     
     // if the parameters don't need refresh, return
-#ifndef RECORD
+
     if (!needsRefresh && !init)
         return;
-#endif
+
     A = M_PI * r * r;
     I = M_PI * r * r * r * r * 0.25;
 
@@ -415,9 +517,10 @@ void DynamicStiffString::refreshCoefficients (bool init)
     // Calculate stiffness coefficient (squared)
     kappaSq = E * I / (rho * A);
 
-    double stabilityTerm = cSq * k * k + 4.0 * sigma1 * k; // just easier to write down below
+    float stabilityTerm = cSq * k * k + 4.0 * sigma1 * k; // just easier to write down below
     
-    h =  sqrt (0.5 * (stabilityTerm + sqrt ((stabilityTerm * stabilityTerm) + 16.0 * kappaSq * k * k)));
+    h =  sqrt(0.5 * (stabilityTerm + sqrt((stabilityTerm * stabilityTerm) + 16.0 * kappaSq * k * k)));
+
     Nfrac = L / h;
 
     // check if the change does not surpass a limit

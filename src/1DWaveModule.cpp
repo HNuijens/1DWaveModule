@@ -26,12 +26,13 @@ DaisySeed hw;
 
 //StiffString stiffString;
 //DynamicString dynamicString;
+//DynamicStiffString dynamicStiffString;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
 
-float freq = 220; 
+float freq = 150; 
 float freqChange = 0.01; 
-float minFreq = 150;
-float maxFreq = 300;
+float minFreq = 75;
+float maxFreq = 600;
 int t = 0;
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
@@ -43,23 +44,26 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	{
 		freqChange*=-1;
 		//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
+		dynamicStiffString->excite(1., 5, 15);
+
 	}
 
 	//dynamicString.setDynamicGrid(freq);
-	
+	dynamicStiffString->refreshParameter(3, freq);
 
 	for (size_t i = 0; i < size; i++)
 	{
-		dynamicStiffString -> process();
+		dynamicStiffString->process();
 
 		out[0][i] = limit(-1., 1., dynamicStiffString->getOutput());
 		out[1][i] = limit(-1., 1., dynamicStiffString->getOutput());
+
+
 	}
 }
 
 int main(void)
-{
-	hw.Init();
+{	hw.Init();
 	hw.SetAudioBlockSize(4); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
 	
@@ -67,11 +71,13 @@ int main(void)
 	// stiffString.setGrid(defaultBarParameters);
 	// stiffString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10, false);
 
-	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, 1.0 / hw.AudioSampleRate());
+	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, hw.AudioSampleRate());
 	//dynamicStiffString.setFs(hw.AudioSampleRate());
 	//dynamicString.setGrid(defaultStiffStringParameters);
 	//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
 	dynamicStiffString -> excite();
+	
+	//dynamicStiffString.init(defaultDynamicStiffStringParameters, 1.0 / hw.AudioSampleRate());
 
 	hw.StartAudio(AudioCallback);
 
