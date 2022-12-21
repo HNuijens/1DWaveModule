@@ -38,8 +38,6 @@ DynamicStiffString::DynamicStiffString(unordered_map<string, float> parameters, 
     A = r * r * M_PI;
     I = r * r * r * r * M_PI * 0.25;
 
-    //c = f0 * 2.0 * L;
-
     origR = r;
     origT = T;
     origE = E;
@@ -65,15 +63,7 @@ DynamicStiffString::DynamicStiffString(unordered_map<string, float> parameters, 
 
     float hMin = sqrt(cSqMin * k * k + 4.0 * SIG_1_MIN * k);
     Nmax = floor (2.0 * L / hMin);
-    
-    // float rMax = 0.5 * r; //?
-    // float cSqMax = 2.0 * T / (0.5 * rho * rMax * rMax * M_PI);
-    // float kappaSqMax = 2.0 * E * M_PI *rMax * rMax * rMax * rMax * 0.25 / (0.5 * rho * rMax * rMax * M_PI);
-    
-    // float hMax = sqrt((cSqMax * k * k + 4.0 * sigma1 * 2.0 * k + sqrt(pow(cSqMax * k * k + 4.0 * sigma1 * 2.0 * k, 2) + 16 * kappaSqMax * k * k))/2.0);
-
-    // float Nmin = floor (0.5 * L / hMax);
-    
+        
     // only add to left system (v)
     int MvMax = Nmax - Mw;
     
@@ -247,7 +237,7 @@ void DynamicStiffString::updateStates()
     Nprev = N;
 }
 
-void DynamicStiffString::excite (float amp, int loc, float width)
+void DynamicStiffString::excite (float amp, int loc, float excitationLoc, float width)
 {
     //// Arbitrary excitation function (raised cosine) ////
     

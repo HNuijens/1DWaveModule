@@ -49,7 +49,7 @@ public:
         return v[1][6]; // set to be fixed due to varying N
     }
     
-    void excite (float amp = 1., int loc = -1, float width = 10);
+    void excite (float amp = 1., int loc = -1, float excitationLoc = 0.22,  float width = 10);
     //void mouseDown (const MouseEvent& e) override;
     
     bool shouldExcite() { return excitationFlag; };
@@ -95,7 +95,6 @@ private:
     bool excitationFlag = false;
     
     // initialise location of excitation
-    float excitationLoc = 0.22;
     
     bool clamped = true;
     

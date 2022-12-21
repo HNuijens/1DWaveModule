@@ -14,8 +14,6 @@
 #include <memory>
 
 #include "Global.h"
-//#include "StiffString.h"
-//#include "DynamicString.h"
 #include "DynamicStiffString.h"
 
 
@@ -23,7 +21,6 @@ using namespace daisy;
 using namespace daisysp;
 
 DaisySeed hw;
-
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
 
 float freq = 300; 
@@ -41,7 +38,7 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	{
 		freqChange*=-1;
 		//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
-		dynamicStiffString->excite(1., 5, 15);
+		dynamicStiffString->excite(1.0, -1, 1. / (rand() % 10 + 1), 10);
 
 	}
 
