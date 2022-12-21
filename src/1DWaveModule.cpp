@@ -24,14 +24,11 @@ using namespace daisysp;
 
 DaisySeed hw;
 
-//StiffString stiffString;
-//DynamicString dynamicString;
-//DynamicStiffString dynamicStiffString;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
 
-float freq = 150; 
-float freqChange = 0.01; 
-float minFreq = 75;
+float freq = 300; 
+float freqChange = 0.05; 
+float minFreq = 20;
 float maxFreq = 600;
 int t = 0;
 
@@ -66,18 +63,11 @@ int main(void)
 {	hw.Init();
 	hw.SetAudioBlockSize(4); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-	
-	// stiffString.setFs(hw.AudioSampleRate());
-	// stiffString.setGrid(defaultBarParameters);
-	// stiffString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10, false);
+
 
 	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, hw.AudioSampleRate());
-	//dynamicStiffString.setFs(hw.AudioSampleRate());
-	//dynamicString.setGrid(defaultStiffStringParameters);
-	//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
+
 	dynamicStiffString -> excite();
-	
-	//dynamicStiffString.init(defaultDynamicStiffStringParameters, 1.0 / hw.AudioSampleRate());
 
 	hw.StartAudio(AudioCallback);
 

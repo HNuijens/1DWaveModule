@@ -60,7 +60,7 @@ static unordered_map<string, float> defaultDynamicStiffStringParameters
     = {{"f0", 220.0},
        {"L", 1.0},
        {"rho", 7850.0},
-       {"T", 150},
+       {"T", 300},
        {"A", 0.0005 * 0.0005 * M_PI},
        {"r", 0.0005},
        {"E", 2e11},

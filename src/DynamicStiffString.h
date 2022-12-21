@@ -33,13 +33,6 @@ public:
     DynamicStiffString(unordered_map<string, float> parameters, float sr);
     ~DynamicStiffString();
 
-    //void paint (juce::Graphics&) override;
-    //void resized() override;
-    
-    // function to draw the state of the string
-    //Path visualiseState (Graphics& g, float visualScaling, float& length);
-
-    void init(unordered_map<string, float> parameters, float k); 
     void calculateScheme();
     void updateStates();
 
@@ -63,8 +56,6 @@ public:
     
     void addRemovePoint();
     void refreshCustomIp();
-    
-    //bool keyPressed (const KeyPress& key, Component* originatingComponent) override;
 private: 
     // Model parameters
     float f0, L, rho, r, A, T, E, I, cSq, kappaSq, sigma0, sigma1, lambdaSq, muSq, h, k;
