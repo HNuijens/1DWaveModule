@@ -19,31 +19,41 @@
 
 using namespace daisy;
 using namespace daisysp;
+using namespace daisy::seed;
+
+std::vector<Pin> parameterPins =  {A0, A1, A2, A3, A4, A5, A6}; 
+
+enum AdcChannel {
+   lengthKnob = 0,
+   densityKnob,
+   radiusKnob,
+   tensionKnob,
+   elasticityKnob,
+   freqIndepKnob,
+   freqDepKnob,
+   NUM_ADC_CHANNELS
+};
 
 DaisySeed hw;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
 
-float freq = 300; 
-float freqChange = 0.05; 
-float minFreq = 20;
+float T = 300; 
+int t = 0 ; 
 float maxFreq = 600;
-int t = 0;
+
+void configADC();
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
 	//stiffString.exciteSystem(0.8, 0.3, 10, false);
 
-	freq+= freqChange; 
-	if(freq > maxFreq || freq < minFreq)
+	if(t > 10000)
 	{
-		freqChange*=-1;
-		//dynamicString.exciteSystem(0.8f, 1. / (rand() % 10 + 1), 10);
-		dynamicStiffString->excite(1.0, -1, 1. / (rand() % 10 + 1), 10);
-
+		//1. / (rand() % 10 + 1)
+		dynamicStiffString->excite(1.0, -1, 0.22, 10);
+		t = 0; 
 	}
-
-	//dynamicString.setDynamicGrid(freq);
-	dynamicStiffString->refreshParameter(3, freq);
+	t++;
 
 	for (size_t i = 0; i < size; i++)
 	{
@@ -51,8 +61,6 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 
 		out[0][i] = limit(-1., 1., dynamicStiffString->getOutput());
 		out[1][i] = limit(-1., 1., dynamicStiffString->getOutput());
-
-
 	}
 }
 
@@ -60,7 +68,8 @@ int main(void)
 {	hw.Init();
 	hw.SetAudioBlockSize(4); // number of samples handled per callback
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
-
+	
+	configADC();
 
 	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, hw.AudioSampleRate());
 
@@ -69,8 +78,33 @@ int main(void)
 	hw.StartAudio(AudioCallback);
 
 	while(1) {
-
+		for(int i = 0 ; i < NUM_ADC_CHANNELS; i ++)
+		{
+			float input = hw.adc.GetFloat(i);
+			float value = map(input, 0., 1., parameterLimits[i][0], parameterLimits[i][1]);
+			dynamicStiffString->refreshParameter(i, value);
+		}
+		
+		//float input = hw.adc.GetFloat(0);
+		//T = map(input, 0., 1., parameterLimits[i][0], 800.);
+		//dynamicStiffString->refreshParameter(3, T);
+		System::Delay(50);
 	}
+}
+
+void configADC()
+{
+	//const int num_adc_channels = static_cast<int>(parameterPins.size()); 
+	AdcChannelConfig adc_config[NUM_ADC_CHANNELS];
+
+
+	for(int i = 0; i < parameterPins.size(); i ++)
+	{
+		adc_config[i].InitSingle(parameterPins[i]);
+	}
+
+	hw.adc.Init(adc_config, NUM_ADC_CHANNELS);
+	hw.adc.Start(); 
 }
 
 

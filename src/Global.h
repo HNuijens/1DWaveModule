@@ -28,6 +28,11 @@ static float limit(float min, float max, float x)
         return x;
 }
 
+static float map(float value, float oldMin, float oldMax, float newMin, float newMax)
+{
+    return (value - oldMin) / (oldMax - oldMin) * (newMax - newMin) + newMin;
+}
+
 static unordered_map<string, float> defaultStiffStringParameters
     = {{"f0", 220.0},
        {"L", 1.0},
@@ -67,5 +72,16 @@ static unordered_map<string, float> defaultDynamicStiffStringParameters
        {"I", pow(0.0005, 4) * M_PI * 0.25},
        {"sig0", 1.0},
        {"sig1", 0.005}};      
+
+
+static float parameterLimits[7][2] = {
+    {0.1, 2.},
+    {3925., 15700.},
+    {0.00025, 0.001},
+    {0., 600.},
+    {10000000000., 40000000000000.},
+    {0., 2.},
+    {0.0002, 0.05}
+    }; 
 
 
