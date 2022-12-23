@@ -34,7 +34,8 @@ enum AdcChannel {
    NUM_ADC_CHANNELS
 };
 
-struct ExcitationInputModule
+void excite(float eMag, float eLoc);
+struct ExcitationHandler
 {
 	int bufferLength = 20; 
 	std::vector<float> buffer; 
@@ -48,7 +49,7 @@ struct ExcitationInputModule
 	return abs(x1 - 0.5) - abs(x2 - 0.5) + 0.5;
 	}
 
-	float getForce(float x1, float x2)
+	float getMagnitude(float x1, float x2)
 	{
 		return 2 * max(abs(x1 - 0.5), abs(x2 - 0.5));
 	}
@@ -62,22 +63,22 @@ struct ExcitationInputModule
 	void process(float val1, float val2)
 	{
 		// excitation detection:
-		float excitationForce = getForce(val1, val2); 
-		buffer[bufferIdx % bufferLength] = excitationForce;
+		float magnitude = getMagnitude(val1, val2); 
+		buffer[bufferIdx % bufferLength] = magnitude;
 		if(bufferIdx > bufferLength) 
 			bufferIdx = 0;
 
-		if(!excitationFlag && (excitationForce > threshold))
+		if(!excitationFlag && (magnitude > threshold))
 		{
 			excitationFlag = true; 
 		}
 
 		//check if string is returned to start pos
-		if(excitationFlag && (excitationForce < threshold))
+		if(excitationFlag && (magnitude < threshold))
 		{
 			float eLoc = getLoc(val1, val2);
 			float eMag = *max_element(buffer.begin(), buffer.end());
-			//excite(eMag, eLoc);
+			excite(eMag, eLoc);
 			excitationFlag = false; 
 		}
 
@@ -87,7 +88,7 @@ struct ExcitationInputModule
 
 DaisySeed hw;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
-ExcitationInputModule exciterInput; 
+ExcitationHandler excitationHandler; 
 
 float T = 300; 
 int t = 0 ; 
@@ -128,7 +129,7 @@ int main(void)
 
 	dynamicStiffString -> excite();
 
-	exciterInput.init();
+	excitationHandler.init();
 	hw.StartAudio(AudioCallback);
 
 	while(1) {
@@ -141,7 +142,7 @@ int main(void)
 		
 		float val1 = 0.5, val2 = 0.5; // dummy values
 		
-		exciterInput.process(val1, val2);
+		excitationHandler.process(val1, val2);
 		
 		System::Delay(5);
 	}
