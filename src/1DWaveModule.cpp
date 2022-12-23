@@ -34,14 +34,67 @@ enum AdcChannel {
    NUM_ADC_CHANNELS
 };
 
+struct ExcitationInputModule
+{
+	int bufferLength = 20; 
+	std::vector<float> buffer; 
+	int bufferIdx = 0; 
+	
+	float threshold = 0.1; 
+	bool excitationFlag = false; 
+
+	float getLoc(float x1, float x2)
+	{
+	return abs(x1 - 0.5) - abs(x2 - 0.5) + 0.5;
+	}
+
+	float getForce(float x1, float x2)
+	{
+		return 2 * max(abs(x1 - 0.5), abs(x2 - 0.5));
+	}
+
+	void init(int bufferLength = 20, float threshold = 0.1)
+	{
+		buffer = std::vector<float>(bufferLength, 0.);
+		this->threshold = threshold; 
+	}
+
+	void process(float val1, float val2)
+	{
+		// excitation detection:
+		float excitationForce = getForce(val1, val2); 
+		buffer[bufferIdx % bufferLength] = excitationForce;
+		if(bufferIdx > bufferLength) 
+			bufferIdx = 0;
+
+		if(!excitationFlag && (excitationForce > threshold))
+		{
+			excitationFlag = true; 
+		}
+
+		//check if string is returned to start pos
+		if(excitationFlag && (excitationForce < threshold))
+		{
+			float eLoc = getLoc(val1, val2);
+			float eMag = *max_element(buffer.begin(), buffer.end());
+			//excite(eMag, eLoc);
+			excitationFlag = false; 
+		}
+
+		bufferIdx ++; 
+	}
+};
+
 DaisySeed hw;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
+ExcitationInputModule exciterInput; 
 
 float T = 300; 
 int t = 0 ; 
 float maxFreq = 600;
 
 void configADC();
+
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -75,6 +128,7 @@ int main(void)
 
 	dynamicStiffString -> excite();
 
+	exciterInput.init();
 	hw.StartAudio(AudioCallback);
 
 	while(1) {
@@ -85,10 +139,11 @@ int main(void)
 			dynamicStiffString->refreshParameter(i, value);
 		}
 		
-		//float input = hw.adc.GetFloat(0);
-		//T = map(input, 0., 1., parameterLimits[i][0], 800.);
-		//dynamicStiffString->refreshParameter(3, T);
-		System::Delay(50);
+		float val1 = 0.5, val2 = 0.5; // dummy values
+		
+		exciterInput.process(val1, val2);
+		
+		System::Delay(5);
 	}
 }
 
@@ -105,6 +160,11 @@ void configADC()
 
 	hw.adc.Init(adc_config, NUM_ADC_CHANNELS);
 	hw.adc.Start(); 
+}
+
+void excite(float eMag, float eLoc)
+{
+	dynamicStiffString -> excite(eMag, eLoc, 10);
 }
 
 
