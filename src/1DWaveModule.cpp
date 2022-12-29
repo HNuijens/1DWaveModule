@@ -12,6 +12,7 @@
 #include "daisysp.h"
 
 #include <memory>
+//#include <U8g2lib.h>
 
 #include "Global.h"
 #include "DynamicStiffString.h"
@@ -31,10 +32,11 @@ enum AdcChannel {
    elasticityKnob,
    freqIndepKnob,
    freqDepKnob,
+   exciter1,
+   exciter2,
    NUM_ADC_CHANNELS
 };
 
-void excite(float eMag, float eLoc);
 struct ExcitationHandler
 {
 	int bufferLength = 20; 
@@ -43,6 +45,9 @@ struct ExcitationHandler
 	
 	float threshold = 0.1; 
 	bool excitationFlag = false; 
+
+	float eLoc;
+	float eMag; 
 
 	float getLoc(float x1, float x2)
 	{
@@ -54,14 +59,15 @@ struct ExcitationHandler
 		return 2 * max(abs(x1 - 0.5), abs(x2 - 0.5));
 	}
 
-	void init(int bufferLength = 20, float threshold = 0.1)
+	void init(int bufferLength = 50, float threshold = 0.1)
 	{
 		buffer = std::vector<float>(bufferLength, 0.);
 		this->threshold = threshold; 
 	}
 
-	void process(float val1, float val2)
+	bool process(float val1, float val2)
 	{
+		// returns true if excited
 		// excitation detection:
 		float magnitude = getMagnitude(val1, val2); 
 		buffer[bufferIdx % bufferLength] = magnitude;
@@ -73,17 +79,18 @@ struct ExcitationHandler
 			excitationFlag = true; 
 		}
 
-		//check if string is returned to start pos
 		if(excitationFlag && (magnitude < threshold))
 		{
-			float eLoc = getLoc(val1, val2);
-			float eMag = *max_element(buffer.begin(), buffer.end());
-			excite(eMag, eLoc);
+			eLoc = getLoc(val1, val2);
+			eMag = *max_element(buffer.begin(), buffer.end());
 			excitationFlag = false; 
+			return true;
 		}
 
 		bufferIdx ++; 
+		return false; 
 	}
+
 };
 
 DaisySeed hw;
@@ -104,7 +111,7 @@ void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, s
 	if(t > 10000)
 	{
 		//1. / (rand() % 10 + 1)
-		dynamicStiffString->excite(1.0, -1, 0.22, 10);
+		//dynamicStiffString->excite(1.0, -1, 0.22, 10);
 		t = 0; 
 	}
 	t++;
@@ -127,22 +134,27 @@ int main(void)
 
 	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, hw.AudioSampleRate());
 
-	dynamicStiffString -> excite();
+	//dynamicStiffString -> excite();
 
 	excitationHandler.init();
 	hw.StartAudio(AudioCallback);
 
 	while(1) {
-		for(int i = 0 ; i < NUM_ADC_CHANNELS; i ++)
+		for(int i = 0 ; i < parameterPins.size(); i ++)
 		{
 			float input = hw.adc.GetFloat(i);
 			float value = map(input, 0., 1., parameterLimits[i][0], parameterLimits[i][1]);
 			dynamicStiffString->refreshParameter(i, value);
 		}
 		
-		float val1 = 0.5, val2 = 0.5; // dummy values
+		float val1 = hw.adc.GetFloat(7);
+		float val2 = hw.adc.GetFloat(8); 
 		
-		excitationHandler.process(val1, val2);
+		if(excitationHandler.process(val1, val2))
+		{
+			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.eLoc, 10); 
+
+		}
 		
 		System::Delay(5);
 	}
@@ -159,13 +171,13 @@ void configADC()
 		adc_config[i].InitSingle(parameterPins[i]);
 	}
 
+	adc_config[7].InitSingle(A7);
+	adc_config[8].InitSingle(A8);
+
+
 	hw.adc.Init(adc_config, NUM_ADC_CHANNELS);
 	hw.adc.Start(); 
 }
 
-void excite(float eMag, float eLoc)
-{
-	dynamicStiffString -> excite(eMag, eLoc, 10);
-}
 
 
