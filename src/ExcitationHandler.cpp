@@ -22,7 +22,9 @@ ExcitationHandler::~ExcitationHandler()
 
 void ExcitationHandler::init(int bufferLength, float threshold)
 {
-    buffer = std::vector<float>(bufferLength, 0.);
+    magBuffer = std::vector<float>(bufferLength, 0.);
+    posBuffer = std::vector<float>(bufferLength, 0.);
+
 	this->threshold = threshold; 
 }
 
@@ -30,8 +32,16 @@ bool ExcitationHandler::process(float val1, float val2)
 {
     // returns true if excited
     // excitation detection:
+
+    // sensorVal1 = val1; 
+    // sensorVal2 = val2; 
+
     float magnitude = getMagnitude(val1, val2); 
-    buffer[bufferIdx % bufferLength] = magnitude;
+    float pos = getPosition(val1, val2);
+
+    magBuffer[bufferIdx % bufferLength] = magnitude;
+    posBuffer[bufferIdx % bufferLength] = pos;
+
     if(bufferIdx > bufferLength) 
         bufferIdx = 0;
 
@@ -42,8 +52,9 @@ bool ExcitationHandler::process(float val1, float val2)
 
     if(excitationFlag && (magnitude < threshold))
     {
-        ePos = getPosition(val1, val2);
-        eMag = *max_element(buffer.begin(), buffer.end());
+        int maxIndex = distance(magBuffer.begin(), max_element(magBuffer.begin(), magBuffer.end()));
+        eMag = magBuffer[maxIndex];
+        ePos = posBuffer[maxIndex];
         excitationFlag = false; 
         return true;
     }
@@ -51,7 +62,6 @@ bool ExcitationHandler::process(float val1, float val2)
     bufferIdx ++; 
     return false; 
 }
-
 
 float ExcitationHandler::getPosition(float x1, float x2)
 {

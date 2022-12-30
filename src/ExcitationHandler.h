@@ -27,10 +27,13 @@ class ExcitationHandler
         float ePos, eMag; 
     private:
         int bufferLength = 20; 
-        std::vector<float> buffer; 
+        std::vector<float> magBuffer; 
+        std::vector<float> posBuffer;
         int bufferIdx = 0; 
         float threshold = 0.1; 
         bool excitationFlag = false; 
+
+        //float sensorVal1, sensorVal2;
 
         float getPosition(float x1, float x2);
 

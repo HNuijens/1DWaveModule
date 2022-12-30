@@ -12,16 +12,18 @@
 #include "daisysp.h"
 
 #include <memory>
-//#include <U8g2lib.h>
 
 #include "Global.h"
 #include "DynamicStiffString.h"
 #include "ExcitationHandler.h"
+//#include "oled_ssd130x.h"
 
 
 using namespace daisy;
 using namespace daisysp;
 using namespace daisy::seed;
+
+//OledDisplay<SSD130x4WireSpi128x64Driver> display;
 
 std::vector<Pin> parameterPins =  {A0, A1, A2, A3, A4, A5, A6}; 
 
@@ -42,25 +44,11 @@ DaisySeed hw;
 std::unique_ptr<DynamicStiffString> dynamicStiffString;
 ExcitationHandler excitationHandler; 
 
-float T = 300; 
-int t = 0 ; 
-float maxFreq = 600;
-
 void configADC();
 
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
-	//stiffString.exciteSystem(0.8, 0.3, 10, false);
-
-	if(t > 10000)
-	{
-		//1. / (rand() % 10 + 1)
-		//dynamicStiffString->excite(1.0, -1, 0.22, 10);
-		t = 0; 
-	}
-	t++;
-
 	for (size_t i = 0; i < size; i++)
 	{
 		dynamicStiffString->process();
@@ -98,7 +86,6 @@ int main(void)
 		if(excitationHandler.process(val1, val2))
 		{
 			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.ePos, 10); 
-
 		}
 		
 		System::Delay(5);
@@ -123,6 +110,7 @@ void configADC()
 	hw.adc.Init(adc_config, NUM_ADC_CHANNELS);
 	hw.adc.Start(); 
 }
+
 
 
 
