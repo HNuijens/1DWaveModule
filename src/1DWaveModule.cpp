@@ -16,6 +16,7 @@
 
 #include "Global.h"
 #include "DynamicStiffString.h"
+#include "ExcitationHandler.h"
 
 
 using namespace daisy;
@@ -35,62 +36,6 @@ enum AdcChannel {
    exciter1,
    exciter2,
    NUM_ADC_CHANNELS
-};
-
-struct ExcitationHandler
-{
-	int bufferLength = 20; 
-	std::vector<float> buffer; 
-	int bufferIdx = 0; 
-	
-	float threshold = 0.1; 
-	bool excitationFlag = false; 
-
-	float eLoc;
-	float eMag; 
-
-	float getLoc(float x1, float x2)
-	{
-	return abs(x1 - 0.5) - abs(x2 - 0.5) + 0.5;
-	}
-
-	float getMagnitude(float x1, float x2)
-	{
-		return 2 * max(abs(x1 - 0.5), abs(x2 - 0.5));
-	}
-
-	void init(int bufferLength = 50, float threshold = 0.1)
-	{
-		buffer = std::vector<float>(bufferLength, 0.);
-		this->threshold = threshold; 
-	}
-
-	bool process(float val1, float val2)
-	{
-		// returns true if excited
-		// excitation detection:
-		float magnitude = getMagnitude(val1, val2); 
-		buffer[bufferIdx % bufferLength] = magnitude;
-		if(bufferIdx > bufferLength) 
-			bufferIdx = 0;
-
-		if(!excitationFlag && (magnitude > threshold))
-		{
-			excitationFlag = true; 
-		}
-
-		if(excitationFlag && (magnitude < threshold))
-		{
-			eLoc = getLoc(val1, val2);
-			eMag = *max_element(buffer.begin(), buffer.end());
-			excitationFlag = false; 
-			return true;
-		}
-
-		bufferIdx ++; 
-		return false; 
-	}
-
 };
 
 DaisySeed hw;
@@ -152,7 +97,7 @@ int main(void)
 		
 		if(excitationHandler.process(val1, val2))
 		{
-			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.eLoc, 10); 
+			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.ePos, 10); 
 
 		}
 		

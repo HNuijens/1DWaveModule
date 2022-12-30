@@ -5,6 +5,7 @@ TARGET = 1DWaveModule
 CPP_SOURCES = \
 src/1DWaveModule.cpp\
 src/DynamicStiffString.cpp\
+src/ExcitationHandler.cpp
 #src/StiffString.cpp\
 src/DynamicString.cpp\
 
