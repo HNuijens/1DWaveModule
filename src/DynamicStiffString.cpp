@@ -498,3 +498,11 @@ void DynamicStiffString::refreshCustomIp()
     customIp[2] = 2.0 / (alf + 2.0);
     customIp[3] = -2.0 * alf / ((alf + 3.0) * (alf + 2.0));
 }
+
+std::vector<float> DynamicStiffString::getStringState()
+{
+    std::vector<float> stringState;
+    stringState.insert(stringState.end(),vStates[0].begin(), vStates[0].begin() + Mv); 
+    stringState.insert(stringState.end(), wStates[0].begin(), wStates[0].end());
+    return stringState; 
+}

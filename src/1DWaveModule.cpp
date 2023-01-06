@@ -16,14 +16,17 @@
 #include "Global.h"
 #include "DynamicStiffString.h"
 #include "ExcitationHandler.h"
-//#include "oled_ssd130x.h"
-
+#include "oled_ssd130x.h"
 
 using namespace daisy;
 using namespace daisysp;
 using namespace daisy::seed;
 
-//OledDisplay<SSD130x4WireSpi128x64Driver> display;
+DaisySeed hw;
+std::unique_ptr<DynamicStiffString> dynamicStiffString;
+ExcitationHandler excitationHandler; 
+OledDisplay<SSD130x4WireSpi128x64Driver> display;
+
 
 std::vector<Pin> parameterPins =  {A0, A1, A2, A3, A4, A5, A6}; 
 
@@ -40,12 +43,13 @@ enum AdcChannel {
    NUM_ADC_CHANNELS
 };
 
-DaisySeed hw;
-std::unique_ptr<DynamicStiffString> dynamicStiffString;
-ExcitationHandler excitationHandler; 
-
 void configADC();
+void initDisplay();
 
+#define PIN_OLED_DC 9
+#define PIN_OLED_RESET 30
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
@@ -64,20 +68,18 @@ int main(void)
 	hw.SetAudioSampleRate(SaiHandle::Config::SampleRate::SAI_48KHZ);
 	
 	configADC();
-
+	initDisplay();
+	excitationHandler.init();
 	dynamicStiffString = std::make_unique<DynamicStiffString> (defaultDynamicStiffStringParameters, hw.AudioSampleRate());
 
-	//dynamicStiffString -> excite();
-
-	excitationHandler.init();
 	hw.StartAudio(AudioCallback);
 
 	while(1) {
 		for(int i = 0 ; i < parameterPins.size(); i ++)
 		{
-			float input = hw.adc.GetFloat(i);
-			float value = map(input, 0., 1., parameterLimits[i][0], parameterLimits[i][1]);
-			dynamicStiffString->refreshParameter(i, value);
+			// float input = hw.adc.GetFloat(i);
+			// float value = map(input, 0., 1., parameterLimits[i][0], parameterLimits[i][1]);
+			// dynamicStiffString->refreshParameter(i, value);
 		}
 		
 		float val1 = hw.adc.GetFloat(7);
@@ -88,6 +90,20 @@ int main(void)
 			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.ePos, 10); 
 		}
 		
+		std::vector<float> u = dynamicStiffString -> getStringState();
+		float screenSpacing = static_cast<float>(SCREEN_WIDTH) / u.size(); 
+		
+		display.Fill(false);
+		for(int i = 1; i < u.size(); i++)
+		{	
+			int x1 = limit(0, SCREEN_WIDTH, floor((i-1)*screenSpacing));
+			int x2 = limit(0, SCREEN_WIDTH, floor(i*screenSpacing));
+			int y1 = limit(0, SCREEN_HEIGHT, 32 + floor(32*u[i-1]));
+			int y2 = limit(0, SCREEN_HEIGHT, 32 + floor(32*u[i]));
+			display.DrawLine(x1, y1, x2, y2, true);
+		}
+		display.Update();		
+	
 		System::Delay(5);
 	}
 }
@@ -96,7 +112,6 @@ void configADC()
 {
 	//const int num_adc_channels = static_cast<int>(parameterPins.size()); 
 	AdcChannelConfig adc_config[NUM_ADC_CHANNELS];
-
 
 	for(int i = 0; i < parameterPins.size(); i ++)
 	{
@@ -109,6 +124,18 @@ void configADC()
 
 	hw.adc.Init(adc_config, NUM_ADC_CHANNELS);
 	hw.adc.Start(); 
+}
+
+void initDisplay()
+{
+    OledDisplay<SSD130x4WireSpi128x64Driver>::Config display_config;
+
+    display_config.driver_config.transport_config.pin_config.dc
+        = hw.GetPin(PIN_OLED_DC);
+    display_config.driver_config.transport_config.pin_config.reset
+        = hw.GetPin(PIN_OLED_RESET);
+
+    display.Init(display_config);
 }
 
 

@@ -21,7 +21,7 @@ class ExcitationHandler
         ExcitationHandler();
         ~ExcitationHandler();
 
-        void init(int bufferLength = 20, float threshold = 0.1);
+        void init(int bufferLength = 20, float threshold = 0.05);
         bool process(float val1, float val2);
 
         float ePos, eMag; 

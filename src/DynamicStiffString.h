@@ -56,6 +56,9 @@ public:
     
     void addRemovePoint();
     void refreshCustomIp();
+
+    std::vector<float> getStringState();
+
 private: 
     // Model parameters
     float f0, L, rho, r, A, T, E, I, cSq, kappaSq, sigma0, sigma1, lambdaSq, muSq, h, k;
@@ -99,4 +102,6 @@ private:
     bool clamped = true;
     
     std::vector<float> customIp;
+
 };
+
