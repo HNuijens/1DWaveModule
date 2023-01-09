@@ -13,6 +13,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include "Global.h"
 
 
 class ExcitationHandler

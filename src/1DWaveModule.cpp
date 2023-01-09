@@ -27,7 +27,6 @@ std::unique_ptr<DynamicStiffString> dynamicStiffString;
 ExcitationHandler excitationHandler; 
 OledDisplay<SSD130x4WireSpi128x64Driver> display;
 
-
 std::vector<Pin> parameterPins =  {A0, A1, A2, A3, A4, A5, A6}; 
 
 enum AdcChannel {
@@ -51,8 +50,15 @@ void initDisplay();
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
+bool excitationFlag = false; 
+
 void AudioCallback(AudioHandle::InputBuffer in, AudioHandle::OutputBuffer out, size_t size)
 {
+	if(excitationFlag)
+	{
+		dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.ePos, 10); 
+		excitationFlag = false; 
+	}
 	for (size_t i = 0; i < size; i++)
 	{
 		dynamicStiffString->process();
@@ -87,7 +93,7 @@ int main(void)
 		
 		if(excitationHandler.process(val1, val2))
 		{
-			dynamicStiffString -> excite(excitationHandler.eMag, -1., excitationHandler.ePos, 10); 
+			excitationFlag = true; 
 		}
 		
 		std::vector<float> u = dynamicStiffString -> getStringState();
@@ -102,6 +108,9 @@ int main(void)
 			int y2 = limit(0, SCREEN_HEIGHT, 32 + floor(32*u[i]));
 			display.DrawLine(x1, y1, x2, y2, true);
 		}
+
+		int x = SCREEN_WIDTH * excitationHandler.ePos; 
+		display.DrawLine(x, 32 - 16 * excitationHandler.eMag, x, 32 + 16 * excitationHandler.eMag, true);
 		display.Update();		
 	
 		System::Delay(5);

@@ -53,8 +53,8 @@ bool ExcitationHandler::process(float val1, float val2)
     if(excitationFlag && (magnitude < threshold))
     {
         int maxIndex = distance(magBuffer.begin(), max_element(magBuffer.begin(), magBuffer.end()));
-        eMag = magBuffer[maxIndex];
-        ePos = posBuffer[maxIndex];
+        eMag = limit(0,1,magBuffer[maxIndex]);
+        ePos = limit(0,1,posBuffer[maxIndex]);
         excitationFlag = false; 
         return true;
     }
@@ -65,7 +65,7 @@ bool ExcitationHandler::process(float val1, float val2)
 
 float ExcitationHandler::getPosition(float x1, float x2)
 {
-    return abs(x1 - 0.5) - abs(x2 - 0.5) + 0.5;
+    return (abs(x1 - 0.5) - abs(x2 - 0.5) + 0.5);
 }
 
 float ExcitationHandler::getMagnitude(float x1, float x2)

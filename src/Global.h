@@ -33,6 +33,8 @@ static float map(float value, float oldMin, float oldMax, float newMin, float ne
     return (value - oldMin) / (oldMax - oldMin) * (newMax - newMin) + newMin;
 }
 
+
+
 static unordered_map<string, float> defaultStiffStringParameters
     = {{"f0", 220.0},
        {"L", 1.0},
